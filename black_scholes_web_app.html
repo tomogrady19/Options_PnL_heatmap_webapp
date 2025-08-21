@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>Options PnL Heatmap</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background: grey;
+      padding: 20px;
+    }
+
+    .container {
+      max-width: 1000px;
+      margin: auto;
+      background: white;
+      padding: 20px;
+    }
+
+    .subtitle {
+      font-size: 12px;
+      color: grey;
+      margin-top: -10px;
+    }
+
+    h1, p {
+      text-align: center;
+    }
+
+    .controls-grid {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+      gap: 15px;
+      margin-bottom: 20px;
+    }
+
+    .control-group {
+      padding: 10px;
+      border: 1px solid grey;
+    }
+
+    .control-group h3 {
+      font-size: 16px;
+      margin-bottom: 10px;
+    }
+
+    label {
+      display: block;
+      font-size: 14px;
+      margin-bottom: 5px;
+    }
+
+    input {
+      width: 100px;
+      padding: 5px;
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+
+    .update-btn {
+      padding: 10px 20px;
+      background-color: blue;
+      color: white;
+      border: none;
+      cursor: pointer;
+      margin: 10px auto;
+      display: block;
+    }
+
+    .charts-section {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 20px;
+    }
+
+    .chart-container {
+      background: white;
+      padding: 10px;
+      border: 1px solid grey;
+    }
+
+    .chart-title {
+      text-align: center;
+      font-weight: bold;
+      margin-bottom: 10px;
+    }
+
+    .axis-labels {
+      display: grid;
+      grid-template-columns: 60px 1fr;
+      grid-template-rows: 1fr 20px;
+      height: 320px;
+      gap: 0;
+      position: relative;
+    }
+
+    .heatmap-container {
+      width: 100%;
+      height: 100%;
+    }
+
+    .heatmap {
+      width: 100%;
+      height: 100%;
+      display: grid;
+      background: grey;
+      gap: 1px;
+    }
+
+    .heatmap-cell {
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      font-size: 10px;
+      padding: 2px;
+      color: black;
+      background-color: white;
+    }
+
+    .x-labels {
+      display: grid;
+      grid-template-columns: repeat(auto-fit, minmax(10px, 1fr));
+      font-size: 10px;
+      text-align: center;
+    }
+
+    .y-labels {
+      display: grid;
+      grid-template-rows: repeat(auto-fit, minmax(10px, 1fr));
+      font-size: 10px;
+      text-align: right;
+    }
+
+    .x-axis-title {
+      font-size: 12px;
+      font-weight: bold;
+      margin-top: 5px;
+      text-align: center;
+      padding-left: 40px;
+    }
+
+    .y-axis-title {
+      font-size: 12px;
+      font-weight: bold;
+      margin-top: 5px;
+      position: absolute;
+      top: 50%;
+      left: -20px;
+      transform: translateY(-50%) rotate(-90deg);
+      white-space: nowrap;
+    }
+
+    .footer {
+      text-align: center;
+      font-size: 12px;
+      margin-top: 30px;
+      color: black;
+    }
+
+    @media (max-width: 768px) {
+      .charts-section {
+        grid-template-columns: 1fr;
+      }
+    }
+
+  </style>
+</head>
+<body>
+  <div class="container">
+    <h1>Options PnL Heatmap</h1>
+    <p>Call and Put Option Analysis</p>
+    <p class="subtitle">(Using Black-Scholes Model)</p>
+
+    <div class="controls-grid">
+      <div class="control-group">
+        <h3>Market Parameters</h3>
+        <label>Initial Price:</label>
+        <input id="initialPrice" value="100" />
+        <label>Time to Maturity (years):</label>
+        <input id="timeToMaturity" value="1" />
+        <label>Risk-Free Rate (%):</label>
+        <input id="riskFreeRate" value="5" />
+        <label>Volatility (%):</label>
+        <input id="volatility" value="20" />
+      </div>
+
+      <div class="control-group">
+        <h3>Strike Price Range</h3>
+        <label>Min:</label>
+        <input id="strikeMin" value="80" />
+        <label>Max:</label>
+        <input id="strikeMax" value="120" />
+        <label>Grid Points:</label>
+        <input id="strikePoints" value="10" />
+      </div>
+
+      <div class="control-group">
+        <h3>Stock Price at Maturity</h3>
+        <label>Min:</label>
+        <input id="stockMin" value="80" />
+        <label>Max:</label>
+        <input id="stockMax" value="120" />
+        <label>Grid Points:</label>
+        <input id="stockPoints" value="10" />
+      </div>
+    </div>
+
+    <button class="update-btn" onclick="updateCharts()">Update</button>
+
+    <div class="charts-section">
+      <div class="chart-container">
+        <div class="chart-title">Call PnL</div>
+        <div class="axis-labels">
+          <div class="y-axis-title">Stock Price</div>
+          <div class="y-labels" id="callYLabels"></div>
+          <div class="heatmap-container">
+            <div class="heatmap" id="callHeatmap"></div>
+          </div>
+          <div></div>
+          <div class="x-labels" id="callXLabels"></div>
+        </div>
+        <div class="x-axis-title">Strike Price</div>
+      </div>
+
+      <div class="chart-container">
+        <div class="chart-title">Put PnL</div>
+        <div class="axis-labels">
+          <div class="y-axis-title">Stock Price</div>
+          <div class="y-labels" id="putYLabels"></div>
+          <div class="heatmap-container">
+            <div class="heatmap" id="putHeatmap"></div>
+          </div>
+          <div></div>
+          <div class="x-labels" id="putXLabels"></div>
+        </div>
+        <div class="x-axis-title">Strike Price</div>
+      </div>
+    </div>
+
+    <div class="footer">by Tom O'Grady</div>
+  </div>
+
+  <!-- JavaScript section -->
+  <script>
+    function normalCDF(x) {
+      const a1 = 0.254829592, a2 = -0.284496736, a3 = 1.421413741;
+      const a4 = -1.453152027, a5 = 1.061405429, p = 0.3275911;
+      const sign = x < 0 ? -1 : 1;
+      x = Math.abs(x) / Math.sqrt(2.0);
+      const t = 1.0 / (1.0 + p * x);
+      const y = 1.0 - (((((a5 * t + a4) * t) + a3) * t + a2) * t + a1) * t * Math.exp(-x * x);
+      return 0.5 * (1.0 + sign * y);
+    }
+
+    function blackScholesModel(S, K, t, r, sigma) {
+      const sqrtT = Math.sqrt(t);
+      const expRt = Math.exp(-r * t);
+      const d1 = (Math.log(S / K) + (r + sigma * sigma / 2) * t) / (sigma * sqrtT);
+      const d2 = d1 - sigma * sqrtT;
+      const callPremium = S * normalCDF(d1) - K * expRt * normalCDF(d2);
+      const putPremium = K * expRt * normalCDF(-d2) - S * normalCDF(-d1);
+      return { callPremium, putPremium };
+    }
+
+    function calculatePnL(Si, K, t, r, sigma, Sf) {
+      const { callPremium, putPremium } = blackScholesModel(Si, K, t, r, sigma);
+      const callPnL = Math.max(Sf - K, 0) - callPremium;
+      const putPnL = Math.max(K - Sf, 0) - putPremium;
+      return { callPnL, putPnL };
+    }
+
+    function getColorForValue(value, min, max) {
+      const ratio = (value - min) / (max - min);
+      const red = Math.round(255 * (1 - ratio));
+      const green = Math.round(255 * ratio);
+      return `rgb(${red},${green},0)`;
+    }
+
+    function createHeatmap(containerId, xLabelsId, yLabelsId, xValues, yValues, values) {
+      const container = document.getElementById(containerId);
+      const xLabels = document.getElementById(xLabelsId);
+      const yLabels = document.getElementById(yLabelsId);
+      container.innerHTML = '';
+      xLabels.innerHTML = '';
+      yLabels.innerHTML = '';
+
+      const rows = yValues.length;
+      const cols = xValues.length;
+      container.style.gridTemplateRows = `repeat(${rows}, 1fr)`;
+      container.style.gridTemplateColumns = `repeat(${cols}, 1fr)`;
+
+      let min = Math.min(...values.flat());
+      let max = Math.max(...values.flat());
+
+      yValues.forEach(v => {
+        const label = document.createElement('div');
+        label.textContent = v.toFixed(2);
+        yLabels.appendChild(label);
+      });
+
+      xValues.forEach(v => {
+        const label = document.createElement('div');
+        label.textContent = v.toFixed(2);
+        xLabels.appendChild(label);
+      });
+
+      values.forEach(row => {
+        row.forEach(value => {
+          const cell = document.createElement('div');
+          cell.className = 'heatmap-cell';
+          cell.style.backgroundColor = getColorForValue(value, min, max);
+          cell.textContent = value.toFixed(2);
+          container.appendChild(cell);
+        });
+      });
+    }
+
+    function updateCharts() {
+      const Si = parseFloat(document.getElementById("initialPrice").value);
+      const t = parseFloat(document.getElementById("timeToMaturity").value);
+      const r = parseFloat(document.getElementById("riskFreeRate").value) / 100;
+      const sigma = parseFloat(document.getElementById("volatility").value) / 100;
+
+      const strikeMin = parseFloat(document.getElementById("strikeMin").value);
+      const strikeMax = parseFloat(document.getElementById("strikeMax").value);
+      const strikePoints = parseInt(document.getElementById("strikePoints").value);
+
+      const stockMin = parseFloat(document.getElementById("stockMin").value);
+      const stockMax = parseFloat(document.getElementById("stockMax").value);
+      const stockPoints = parseInt(document.getElementById("stockPoints").value);
+
+      const Ks = Array.from({ length: strikePoints }, (_, i) => strikeMin + i * (strikeMax - strikeMin) / (strikePoints - 1));
+      const Ss = Array.from({ length: stockPoints }, (_, i) => stockMin + i * (stockMax - stockMin) / (stockPoints - 1));
+
+      const callValues = Ss.map(Sf => Ks.map(K => calculatePnL(Si, K, t, r, sigma, Sf).callPnL));
+      const putValues = Ss.map(Sf => Ks.map(K => calculatePnL(Si, K, t, r, sigma, Sf).putPnL));
+
+      createHeatmap("callHeatmap", "callXLabels", "callYLabels", Ks, Ss, callValues);
+      createHeatmap("putHeatmap", "putXLabels", "putYLabels", Ks, Ss, putValues);
+    }
+
+    window.onload = updateCharts;
+  </script>
+</body>
+</html>
